@@ -12,41 +12,53 @@ This paper aims to get you quickly started with different kinds of observability
 
 # Table of contents
 
-- [Executive Summary](#executive-summary)
-- [Table of Contents](#table-of-contents)
-- [Introduction](#introduction)
-  - [Target Audience](#target-audience)
-  - [Goals](#goals)
-- [What is Observability?](#what-is-observability)
-- [Observability Signals](#observability-signals)
-  - [Metrics](#metrics)
-  - [Logs](#logs)
-  - [Traces](#traces)
-  - [Profiles](#profiles)
-  - [Stack Dumps](#stack-dumps)
-- [Why so many signals?](#why-so-many-signals)
-  - [Challenges with multi-signal observability](#challenges-with-multi-signal-observability)
-- [Correlating Observability Signals](#correlating-observability-signals)
-  - [Practical applications](#practical-applications)
-  - [Practical implementations](#practical-implementations)
-- [Use Cases](#use-cases)
-  - [Box-based monitoring categories](#box-based-monitoring-categories)
-  - [Implementing SLIs, SLOs and SLAs](#implementing-slis-slos-and-slas)
-  - [Alerting on Observability data](#alerting-on-observability-data)
-- [Gaps around Observability](#gaps-around-observability)
-  - [Multi-signal correlation](#multi-signal-correlation)
-- [Contributors](#contributors)
-- [Contributing](#contributing)
-  - [Ideas](#ideas)
-- [References](#references)
+- [Observability Whitepaper](#observability-whitepaper)
+  - [Executive Summary](#executive-summary)
+  - [Table of Contents](#table-of-contents)
+- [Table of contents](#table-of-contents-1)
+  - [Introduction](#introduction)
+    - [Target Audience](#target-audience)
+    - [Goals](#goals)
+  - [What is Observability?](#what-is-observability)
+  - [Observability Signals](#observability-signals)
+    - [Metrics](#metrics)
+    - [Logs](#logs)
+    - [Traces](#traces)
+    - [Profiles](#profiles)
+    - [Stack Dumps](#stack-dumps)
+  - [Why so many signals?](#why-so-many-signals)
+    - [Challenges with multi-signal observability](#challenges-with-multi-signal-observability)
+  - [Correlating Observability Signals](#correlating-observability-signals)
+    - [Practical applications](#practical-applications)
+    - [Practical implementations](#practical-implementations)
+  - [Use Cases](#use-cases)
+    - [Box-based monitoring categories](#box-based-monitoring-categories)
+    - [Implementing SLIs, SLOs and SLAs](#implementing-slis-slos-and-slas)
+    - [Alerting on Observability data](#alerting-on-observability-data)
+      - [__Alerting in practice__](#alerting-in-practice)
+        - [__Target Error Rate__](#target-error-rate)
+        - [__Burn Rate__](#burn-rate)
+  - [Gaps around Observability](#gaps-around-observability)
+    - [Multi-signal correlation](#multi-signal-correlation)
+  - [Contributors](#contributors)
+  - [Contributing](#contributing)
+    - [Ideas](#ideas)
+  - [References](#references)
+    - [Ref 1](#ref-1)
+    - [Ref 2](#ref-2)
+    - [Ref 3](#ref-3)
+    - [Ref 4](#ref-4)
+    - [Ref 5](#ref-5)
+    - [Ref 6](#ref-6)
+    - [Ref 7](#ref-7)
 
 ## Introduction
 
 With the popularization of cloud computing, microservices and distributed systems, new applications are often designed and built to run on the cloud. Although this provides new strategies to build more resilient, better performing and more secure applications, it comes with the potential cost of losing control over the infrastructure supporting these workloads. Sysadmins, developers, and software operators must know the state of an application in production and the underlying infrastructure health where that application is running. Moreover, they should be able to observe these signals, ideally with no or minimal instrumentation in the source.
 
-Applications need to be designed and built to include and facilitate mechanisms that make them observable by some entity, e.g., whether it is another application or a human without access to the datacenter. The effort should be made early, beginning with design, and it often requires extra code or infrastructure automation and instrumentation. These cultural and process changes are often challenges or blockers for many organizations. On top of that, there are many methods and tools out in the market that suggest different approaches to reach a reasonable level of observability.
+Applications need to be designed and built to include and facilitate mechanisms that make them observable by some entity, whether it is another application or a human without access to the data center. The effort should be made early, beginning with design, and it often requires extra code or infrastructure automation and instrumentation. These cultural and process changes are often challenging for many organizations. On top of that, there are many methods and tools out in the market that suggest different approaches to reach a reasonable level of observability.
 
-[Community research](#ref-4) conducted by ClearPath Strategies and Honeycomb.io show that "Three in four teams have yet to begin or are early in their observability journeys" and that "There is momentum behind the shift toward achieving more observable systems". Once one reaches a satisfactory level of observability, there is no doubt of its benefits, but getting started can feel like a daunting task! Cultural changes, different tools, different objectives, different methods. So many details that need to be taken into consideration can make this journey quite confusing and painful. The purpose of this paper is to provide clarity so that more software and operations teams can gain the benefits of observability in their systems.
+[Community research](#ref-4) conducted by ClearPath Strategies and Honeycomb.io shows that "Three in four teams have yet to begin or are early in their observability journeys" and that "There is momentum behind the shift toward achieving more observable systems". Once one reaches a satisfactory level of observability, there is no doubt of its benefits, but getting started can feel like a daunting task! Cultural changes and differences in tools, objectives and methods - many details that need to be taken into consideration can make this journey quite confusing and painful. The purpose of this paper is to provide clarity so that more software and operations teams can gain the benefits of observability in their systems.
 
 ### Target Audience
 
@@ -63,21 +75,21 @@ This paper relates to any of the above roles from organizations that wish to del
 
 ### Goals
 
-Cloud computing adoption has helped small, big tech companies optimize cost, scale, and design more efficient products, but it came with its complexity. Since the infrastructure is now often remote, ephemeral, and globally distributed, the control that Sysadmins once had over datacenters is now lost. Companies that once had a culture where Administrators and Developers had conflicting goals have the opportunity to change to a new culture where they work together as a single team aiming to build reliable software. Several new strategies and tools have emerged from observing the state of Cloud Native systems and helping such companies to keep their systems reliable in this new reality.
+Cloud computing adoption has helped both small and big tech companies optimize cost and scale, and design more efficient products, but it came with its complexity. Since the infrastructure is now often remote, ephemeral, and globally distributed, the control that Sysadmins once had over data centers is now lost. Companies that once had a culture where Administrators and Developers had conflicting goals have the opportunity to change to a new culture where they work together as a single team aiming to build reliable software. Several new strategies and tools have emerged from observing the state of Cloud Native systems and helping such companies to keep their systems reliable in this new reality.
 
-During the design and development of an observable system, it must be instrumented (or allow meaningful auto-instrumentation) to send or expose telemetry data to a third party, usually a set of tools, responsible for providing meaningful information out of the exposed data. That telemetry data frequently comes in the form of metrics and logs, long used by software engineering teams, as well as traces, structured events, profiles, and crash dumps. Each signal has its purpose and best practices, and their misuse can lead to new problems when running software at scale, such as "alert fatigue" and "high cost".
+During the design and development of an observable system, it must be instrumented (or allow for meaningful auto-instrumentation) to send or expose telemetry data to a third party, usually a set of tools, responsible for providing meaningful information based on the exposed data. That telemetry data frequently comes in the form of metrics and logs, long used by software engineering teams, as well as traces, structured events, profiles, and crash dumps. Each signal has its purpose and best practices, and their misuse can lead to new problems when running software at scale, such as "alert fatigue" and "high cost".
 
-Even though there are several new challenges, such as culture change, capacity planning, legal issues, and others, many of them were already tackled and solved by innovative companies that entered this new era early. Beginners can learn from their findings and mistakes and follow their best practices to tackle those same issues. This paper will provide the difference between observability signals and how they should be handled, list several different methods that successful companies used when tackling common issues, present several tools that fall under the observability scope and where they should fit in your observability stack, as well as show common known gaps that still wasn't solved or that a method still isn't very well consolidated in the market.
+Even though there are several new challenges, such as culture change, capacity planning, legal issues, and others, many of them were already tackled and solved by innovative companies that entered this new era early. Beginners can learn from their findings and mistakes and follow their best practices to tackle those same issues. This paper will provide the difference between observability signals and how they should be handled, list several different methods that successful companies used when tackling common issues, present several tools that fall under the observability scope and where they should fit in your observability stack, as well as show common known gaps that still haven't been solved or that a method still isn't very well consolidated in the market.
 
 ## What is Observability?
 
-There is no doubt that observability is a desirable property of a system nowadays. Everybody is saying that, right? Some of you may have already started your observability journey, while others are reading this whitepaper right now just because everyone is saying that you should make your systems observable. The fact is that "Observability" has become a buzzword, and like every other buzzword, everyone wants to leave their mark while advocating for it, and what you have heard may have a different meaning from what it originated from. If you're going to level up your game on observability, let's try to make it clear its original purpose.
+There is no doubt that observability is a desirable property of a system nowadays. Everybody is saying that, right? Some of you may have already started your observability journey, while others are reading this whitepaper right now just because everyone is saying that you should make your systems observable. The fact is that "Observability" has become a buzzword, and like every other buzzword, everyone wants to leave their mark while advocating for it, and what you have heard may have a different meaning from what it originated from. If you're going to level up your game on observability, let's try to clarify its original purpose.
 
-["In control theory, observability is a measure of how well internal states of a system can be inferred from knowledge of its external outputs"](#ref-1). Being less theoretical, it is a function of a system with which humans and machines can observe, understand and act on the state of said system. So yes, observability, by definition, looks simple, but it gets complicated to decide which output(s) a system should have when implementing without an objective in mind. That's when things start to go sideways.
+["In control theory, observability is a measure of how well internal states of a system can be inferred from knowledge of its external outputs"](#ref-1). Being less theoretical, it is a function of a system with which humans and machines can observe, understand, and act on the state of said system. So yes, observability, by definition, looks simple, but it gets complicated to decide which output(s) a system should have when implementing without an objective in mind. That's when things start to go sideways.
 
-When getting started, it's easy just to copy someone else's work. That is one of the blessings and, at the same time, one of the curses of Open Source. There are so many examples online; helm charts, Ansible playbooks, Terraform modules, one can just run one of those scripts, and you have an observability stack up and running in just a couple of minutes. It is easy, and it works for others. Therefore it should work for me, right? Well, we're not trying to discourage you from using those types of scripts, but you must keep in mind that observability is not that simple. You must be conscious about what outputs are coming out of your system and, more important than everything, you need to have an objective in mind! You may think: "Oh, I want to collect this particular data because you never know, I may need that in the future." and you repeat this thought for another data, and another, and another, and then you realize that you are building a data lake instead. Everything costs, so do observability, so [YAGNI](https://en.wikipedia.org/wiki/You_aren%27t_gonna_need_it) rule applies here.
+When getting started, it's easy just to copy someone else's work. That is one of the blessings and, at the same time, one of the curses of Open Source. There are so many examples online: Helm charts, Ansible playbooks, Terraform modules, one can just run one of those scripts, and you have an observability stack up and running in just a couple of minutes. It is easy, and it works for others. Therefore it should work for me, right? Well, we're not trying to discourage you from using those types of scripts, but you must keep in mind that observability is not that simple. You must be conscious about what outputs are coming out of your system and, more important than everything, you need to have an objective in mind! You may think: "Oh, I want to collect this particular data because you never know, I may need that in the future." and you repeat this thought for another data, and another, and another, and then you realize that you are building a data lake instead. Everything has its costs, and so does observability, so [YAGNI](https://en.wikipedia.org/wiki/You_aren%27t_gonna_need_it) rule applies here.
 
-The benefit of well-implemented observability is that it can be used on literally all phases of the development lifecycle of a system. For example, you can use it while testing your new feature, monitoring production resiliency, having insights about how your customers use your product or making data-driven decisions about your product roadmap. Once you have your goal in mind, that's when you'll start thinking about the outputs, or what we like to call them, the signals.
+The benefit of well-implemented observability is that it can be used in literally all phases of the development lifecycle of a system. For example, you can use it while testing your new feature, monitoring production resiliency, collecting insights about how your customers use your product or making data-driven decisions about your product roadmap. Once you have your goal in mind, that's when you'll start thinking about the outputs, or as we like to call them, the signals.
 
 ## Observability Signals
 
@@ -90,7 +102,7 @@ There is a really good chance you have heard about the "Three Observability Pill
 
 ![image](https://user-images.githubusercontent.com/24193764/121773601-55f86b80-cb53-11eb-8c8b-262a5aad781f.png)
 
-All signals have different ways to be collected or instrumented. They have different resource costs to obtain, store, and analyze while providing different ways to observe the same system. Choosing between them or all of them is a game of trade-offs like all other tasks in engineering. In the next sections, we'll help you make this decision by digging deeper into each signal, starting with the people's favourites: metrics, logs and traces, and then the two new possible signals: continuous profiling and crash dumps.
+All signals have different ways of being collected or instrumented. They have different resource costs to obtain, store, and analyze while providing different ways to observe the same system. Choosing between some of them or all of them is a game of trade-offs like all other tasks in engineering. In the next sections, we'll help you make this decision by digging deeper into each signal, starting with the people's favourites: metrics, logs and traces, and then the two new possible signals: continuous profiling and crash dumps.
 
 ___insert image with all 5 signals here___ (https://docs.google.com/document/d/1eoxBe-tkQclixeNmKXcyCMmaF5w1Kh1rBDdLs0-cFsA/edit?disco=AAAAIHnSQco)
 
@@ -100,11 +112,11 @@ Metrics are numeric representations of data. They fall into two main categories:
 
 Distilled data loses details, e.g. a request counter might not give us information about the exact ID of the user or request or what HTTP headers the individual request had. We essentially reduce the cardinality of the data. This trade-off makes metrics one of the most efficient signals: Subject matter experts chose what to distil and how. Such lower cardinality data increases the efficiency of retaining, emitting, transmitting, storing, and processing. It also reduces mental overload for human operators as they can get a quick overview of a situation.
 
-Metrics typically are either structured or semi-structured and are typically used in three ways:
+Metrics typically are either structured or semi-structured and are normally used in three ways:
 
 * __Real-time monitoring and alerting__ - The most common use-case for metrics is to overview and drill down visual dashboards and trigger alerts or notifications for either humans or automated systems that a monitored system has crossed a threshold or is behaving anomalously.
 * __Trending and analysis__ - Metrics are also used for trend analysis over time and long-term planning purposes while also providing insights into fixing and monitoring underlying problems to prevent a recurrence after an incident has occurred.
-* __Quick debugging__ - Metrics can give insights into what happened during or before the incident. We can often rebuild how applications were behaving and quickly correlate, otherwise hard to connect events, e.g. spike of request latency with the sudden increase of disk IO writes.
+* __Quick debugging__ - Metrics can give insights into what happened during or before the incident. We can often rebuild how applications were behaving and quickly correlate otherwise hard to connect events, e.g. spike of request latency with the sudden increase of disk IO writes.
 
 The information provided by metrics is used to form insights around the overall behaviour and health of systems. Metrics often play a large role in the "what" is happening, sometimes the "why".
 
@@ -125,7 +137,7 @@ We can also highlight special functionality logs:
 
 Logs can be useful in many different scenarios: to gather metrics from it, form traces, verify the security and debugging. Keeping a record of all application and system-related events makes it possible to understand and even reproduce step-by-step actions leading to a particular situation. These records are notably valuable when performing root-cause analysis providing information to understand the state of the application or system at the moment of the failure.
 
-Typically, information stored in the logs is in free-form text, making them a challenge to derive meaning from. There have been many attempts at applying a schema to logs in the past 30 years, but none have been particularly successful. The reason for a schema makes extracting relevant information more accessible. Typically this is done by parsing, segmenting, and analyzing the text in the log file. The data from logs can also be converted to other observability signals, including metrics and traces. Once the data is a metric, it can be used for understanding the change over time. Log data can also be visualized and analyzed through log analytics technologies.
+Typically, information stored in the logs is in free-form text, making them a challenge to derive meaning from. There have been many attempts at applying a schema to logs in the past 30 years, but none have been particularly successful. The reason for a schema is to make extracting relevant information more accessible. Typically this is done by parsing, segmenting, and analyzing the text in the log file. The data from logs can also be converted to other observability signals, including metrics and traces. Once the data is a metric, it can be used for understanding the change over time. Log data can also be visualized and analyzed through log analytics technologies.
 
 Log levels allow expressing the importance of each log statement. One set of such log levels would be ERROR, WARNING, INFO, and DEBUG. With ERROR being the least-detailed level and DEBUG being the highest-detailed:
 
@@ -134,7 +146,7 @@ Log levels allow expressing the importance of each log statement. One set of suc
 1. __INFO__ messages help us understand how the system is working.
 1. __DEBUG__ is the level where very detailed information for each action is stored. Normally, only used during troubleshooting or for short periods due to storage or performance impact.
 
-> Note that this is only one example of categorization. We can see in the industry many more versions depending on needs.
+> Note that this is only one example of categorization. There are many more versions in the industry, depending on particular needs.
 
 One can use the multiple verbosity levels to generate detailed information to assist with troubleshooting and root-cause analysis.
 
@@ -198,7 +210,7 @@ Core dump files are used in software development to troubleshoot a program, i.e.
 
 In Linux-based systems, core dump files can be set to be written anywhere in the system via a global setting (/proc/sys/kernel/core_pattern). From kernel 2.6+ there is a new method of dealing with core dumps, with so-called core dump handlers. This means, in other words, that instead of delegating to the operating system the collecting of the file, the crashing process' output is pushed to an application standard input, which is in charge of writing the file. For example, in Ubuntu-based distributions, this can be done with the support of both systemd or abort. Red Hat-based distributions use the so-called ABRT.
 
-As of today, the cloud-native community still struggles with the collection of the core dumps. We would like to highlight at least two main reasons: Compared to a system where the application developer had access to all knobs to configure name convention, size or even file collection location, in cloud-native, the role of application and infrastructure owners is less clear and therefore (privileged) access to global system settings is less accessible. Further, an aspect inherent of cloud-native environments is data persistence: A crashing application, e.g., a pod, needs assistance when collecting its core dump file to be written to a persistent volume before restart.
+As of today, the cloud-native community still struggles with the collection of the core dumps. We would like to highlight at least two main reasons: Compared to a system, where the application developer had access to all knobs to configure name convention, size or even file collection location, in cloud-native, the role of application and infrastructure owners is less clear and therefore (privileged) access to global system settings is less accessible. Further, an aspect inherent of cloud-native environments is data persistence: A crashing application, e.g. a pod, needs assistance when collecting its core dump file to be written to a persistent volume before restart.
 
 An RFC of approximately 5 years (https://lore.kernel.org/patchwork/patch/643798/) requested namespaced core_pattern support in the Linux kernel community instead of having it as a global system setting. Also, the Docker community has an issue open with around the same age (https://github.com/moby/moby/issues/19289) asking for core_pattern support in Docker.
 
@@ -214,7 +226,7 @@ We also talk about the data that does not fit into the above categories, which i
 
 * Continues Profiling: Code-level consumption numbers (e.g., memory used, CPU time spent) for various resources across different program functions over time.
 
-The first question that comes to our mind is, why would we ever create so many types? Can't we have just one, "catch-them-all" thing? The problem is we can't, in the same way, we can't have a single bicycle that works efficiently on both asphalt roads and off-roads. Each type of signal is highly specialized for its purpose. __Metrics__ are centred around real-time, reliable and cheap monitoring, that supports the first response alerting - a foundation for the reliable system. We collect __log lines__ that give us more insight into smaller details about the running system for more context. At some point, the details form a request tree, so __distributed tracing__ comes into play with its spans and cross-process context propagation. Sometimes we need to dive even deeper, and we jump into __performance application profiles__ to check what piece of code is inefficient and use an unexpected amount of resources.
+The first question that comes to our mind is, why would we ever create so many types? Can't we have just one, all-encompassing category? The problem is, the same way we can't have a single bicycle that works efficiently on both asphalt roads and off-roads, we can't have only one type of signal. Each type of signal is highly specialized for its purpose. __Metrics__ are centred around real-time, reliable and cheap monitoring, that supports the first response alerting - a foundation for the reliable system. We collect __log lines__ that give us more insight into smaller details about the running system for more context. At some point, the details form a request tree, so __distributed tracing__ comes into play with its spans and cross-process context propagation. Sometimes we need to dive even deeper, and we jump into __performance application profiles__ to check what piece of code is inefficient and use an unexpected amount of resources.
 
 As you might have noticed already, having just one signal is rarely enough for a full, convenient observability story. For example, it's too expensive to put too many details into __metrics__ (cardinality), and it's too expensive to __trace__ every possible operation reliably with near-real-time latency required for alerting. That is why we see many organizations aiming to install and leverage multiple signals for their observability story.
 
@@ -230,7 +242,7 @@ Unless you are willing to spend money on a SaaS solution, which will do some of 
 
 ![image](https://user-images.githubusercontent.com/24193764/121791131-ecad4280-cbbc-11eb-9542-0b940f6a5846.png)
 
-When we look at the payloads for each of the mentioned observability signals, there are visible overlaps. For example, let's look at the immediate collection of the data about the target visible in the figure above. We see that the context about "where the data is about" (called typically "target metadata") will be the same for each of the signals. Yet because there is a standalone system behind each of the signals, we tend to discover this information multiple times, often inconsistently, save this information in multiple places and (worse!) index and query it multiple times.
+When we look at the payloads for each of the mentioned observability signals, there are visible overlaps. For example, let's look at the immediate collection of the data about the target visible in the figure above. We see that the context about "where the data is about" (called typically "target metadata") will be the same for each of the signals. Yet, because there is a standalone system behind each of the signals, we tend to discover this information multiple times, often inconsistently, save this information in multiple places and (worse!) index and query it multiple times.
 
 And it's not only for target metadata. For example, many events produce multiple signals: increment metrics, trigger logline and start tracing span. This means that metadata and context related to this particular event are duplicated across the system. There are slowly attempts to mitigate this effect in the open-source, e.g. [Tempo](https://github.com/grafana/tempo) project.
 
@@ -258,7 +270,7 @@ But this is not the end. We sometimes have further details that are sometimes at
 
 ![image](https://user-images.githubusercontent.com/24193764/121791219-e2d80f00-cbbd-11eb-8696-09dfd226aff1.png)
 
-While such a level of correlation might be good enough for some use cases, we might be missing an important one: Large Scale! Processes in such large systems do not handle a few requests. They perform trillions of operations for vastly different purposes and effects. Even if we can get all log lines or traces from a single process, even for a single second, how do you find the request, operation or trace ID that is relevant to your goal from thousands of concurrent requests being processed at that time? Powerful query languages for logging purposes like (e.g. [LogQL](https://grafana.com/docs/loki/latest/logql/) or [OpenSearch DSL](https://opensearch.org/docs/latest/opensearch/query-dsl/full-text/)) allow you to grep logs for details like log levels, error statuses, message, code file, etc. However, this requires you to understand the available fields, their format, and how it maps to the situation in the process.
+While such a level of correlation might be good enough for some use cases, we might be missing an important one: Large scale! Processes in such large systems do not handle a few requests. They perform trillions of operations for vastly different purposes and effects. Even if we can get all log lines or traces from a single process, even for a single second, how do you find the request, operation or trace ID that is relevant to your goal from thousands of concurrent requests being processed at that time? Powerful query languages for logging purposes like (e.g. [LogQL](https://grafana.com/docs/loki/latest/logql/) or [OpenSearch DSL](https://opensearch.org/docs/latest/opensearch/query-dsl/full-text/)) allow you to grep logs for details like log levels, error statuses, message, code file, etc. However, this requires you to understand the available fields, their format, and how it maps to the situation in the process.
 
 Wouldn't it be better if the alert for a high number of certain errors or high latency of some endpoint let you know all the request IDs that were affected? Such alerts are probably based on __metrics__ and such metrics were incremented during some request flow, which most likely also produced a __log line or trace__ and had its __request, operation or trace ID__ assigned, right?
 
@@ -298,7 +310,7 @@ In practice, we have a few choices:
 * Suppose we stick to the push model (for some cases like batch jobs mandatory). In that case, we need to ensure that our client tracing, logging, and metrics implementations add correct and consistent target metadata. Standard code libraries across programming languages help, although it takes time (years!) to adopt those in practice by all 3rd party software we use (think about, e.g. Postgres). Yet, if you control your software, it's not impossible. Service Meshes might help a bit for standard entry/exit observability but will disable any open box observability. The other way to achieve this is to use processing plugins that, e.g. OpenTelemetry, offers to rewrite metadata on the fly (sometimes called relabelling). Unfortunately, it can be brittle in practice and hard to maintain over time.
 * The second option is to use and prefer a pull model and define the target metadata on the admin/operator side. We already do this in open source in [Prometheus](https://prometheus.io/) or [Agent](https://github.com/grafana/agent) thanks to [OpenMetrics](https://openmetrics.io/) for continuously scraping metrics and [ConProf](https://github.com/conprof/conprof) for doing the same for profiles. Similarly, there are already many solutions to tail your logs from standard output/error, e.g. [Promtail](https://grafana.com/docs/loki/latest/clients/promtail/) or [OpenTelemetry tailing](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/overview.md#via-file-or-stdout-logs) collector. Unfortunately, we are not aware of any implementation that offers tailing traces from some medium (yet).
 
-2. Make Operation ID, Request ID or Trace ID the same thing and attach it to the logging system.
+2. Make Operation ID, Request ID or Trace ID equal and attach it to the logging system.
 
 This part has to be ensured on the instrumentation level. Thanks to OpenTelemetry context propagation and APIs, we can do this pretty easily in our code by getting trace ID (ideally, only if the trace is sampled) and adding it to all log lines related to such a request. A very nice way to make it uniformly is to leverage middleware (HTTP) and [interceptors (gRPC)](https://github.com/grpc-ecosystem/go-grpc-middleware) coding paradigms. It's worth noting that even if you don't want to use a tracing system or your tracing sampling is very strict, it's still useful to generate and propagate request ID in your logging. This allows correlating log lines for the single request together.
 
@@ -306,7 +318,7 @@ This part has to be ensured on the instrumentation level. Thanks to OpenTelemetr
 
 Exemplars are somewhat new in the open-source space, so let's take a look at what is currently possible and how to adopt them. Adding exemplars to your logging system is pretty straightforward. We can add an exemplar in the form of a simple `exemplar-request=<traceID>` key-value label for log lines that aggregate multiple requests.
 
-Adding exemplars for the metric system is another story. This might deserve a separate article I might write someday, but as you might imagine, we generally cannot add request or trace ID directly to the metric series metadata (e.g. Prometheus labels). This is because it would create another single-use, unique series with just one sample (causing unbounded "cardinality"). However, in open source, recently, we can use quite a novel pattern defined by [OpenMetrics, called exemplar](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#exemplars). It's additional information, attached to (any) series sample, outside of the main (highly indexed) labels. This is how it looks in the OpenMetrics text format scraped by, e.g. Prometheus:
+Adding exemplars for the metric system is another story. This might deserve a separate article, but as you might imagine, we generally cannot add request or trace ID directly to the metric series metadata (e.g. Prometheus labels). This is because it would create another single-use, unique series with just one sample (causing unbounded "cardinality"). However, since recently, we can use a novel pattern defined by [OpenMetrics, called exemplar](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#exemplars). It's additional information, attached to (any) series sample, outside of the main (highly indexed) labels. This is how it looks in the OpenMetrics text format scraped by, e.g. Prometheus:
 
 ```
 # TYPE foo histogram
@@ -351,9 +363,9 @@ Note that the `query` parameter is not for some magic ExemplarsQL language or so
 
 This API got adopted pretty quickly by Grafana, where you can, even now, on the newest version of AGPLv3 licensed Grafana to render exemplars and allow a quick link to the trace view.
 
-Of course, that's just the basics. There is whole infrastructure and logic in Prometheus done at the beginning of 2021 to support exemplars on scraping, storing, querying, and even replicating those in a remote write. [Thanos](http://thanos.io/) started to support exemplars, so the Grafana.
+Of course, that's just the basics. There is a whole infrastructure and logic in Prometheus developed at the beginning of 2021 to support exemplars on scraping, storing, querying, and even replicating those in a remote write. [Thanos](http://thanos.io/) started to support exemplars, so the Grafana.
 
-It's also worth mentioning that OpenTelemetry also inherited some form of exemplars from OpenCensus. Those are very similar to OpenMetrics one, just only attachable to histogram buckets. Hopefully, we will see standardization in this space given, [OpenTelemetry integrating with OpenMetrics](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/semantic_conventions/openmetrics-guidelines.md).
+It's also worth mentioning that OpenTelemetry also inherited a form of exemplars from OpenCensus. Those are very similar to OpenMetrics one, but only attachable to histogram buckets. Hopefully, we will see standardization in this space given, [OpenTelemetry integrating with OpenMetrics](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/semantic_conventions/openmetrics-guidelines.md).
 
 ## Use Cases
 
@@ -368,14 +380,14 @@ Generally speaking, "closed" box monitoring refers to observing a system from th
 
 ### Implementing SLIs, SLOs and SLAs
 
-Implementing SLI, SLO and SLA metrics lets you measure service quality and customer happiness objectively. More so over, it provides a common set of terminologies between different functions like business, product and engineering within an org. Engineering time is scarce in any organization, but everyone feels like their problem is a burning problem. SLOs make such conversations more data-driven because everyone understands the business consequences of breaching SLOs. While solving internal conflicts, it also makes you more customer-obsessed by providing meaningful abstractions that enable meaningful and actionable alerting.
+Implementing SLI, SLO and SLA metrics lets you measure service quality and customer happiness objectively and , even more so, it provides a common set of terminologies between different functions like business, product and engineering within an organization. Engineering time is scarce in any organization, but everyone feels like their problem is a burning problem. SLOs make such conversations more data-driven, because everyone understands the business consequences of breaching SLOs. While solving internal conflicts, it also makes you more customer-focused by providing meaningful abstractions that enable meaningful and actionable alerting.
 
 Before we deep dive into the implementation details, we should get the definitions clear as they can be fairly confusing and sometimes be used interchangeably.
 
-* Service Level Indicator (SLI): An SLI is a service level indicator—a carefully defined quantitative measure of some aspect of the level of service that is provided.
+* Service Level Indicator (SLI): An SLI is a service level indicator: a carefully defined quantitative measure of some aspect of the level of service that is provided.
 * Service Level Objective (SLO): An SLO is a service level objective: objective for how often you can afford for it to fail. It is a target value or range of values for a service level that an SLI measures.
-* Service Level Agreement (SLA): a business contract that includes consequences of violating the SLO. This is a targeted percentage
-  Error budget: tolerance for failed events over a period of time determined by SLO. This is 100% minus the SLO.
+* Service Level Agreement (SLA): a business contract that includes consequences of violating the SLO. This is a targeted percentage.
+* Error budget: tolerance for failed events over a period of time determined by SLO. This is 100% minus the SLO.
 
 For a proposed SLO to be useful and effective, you will need to get all stakeholders to agree to it. Product managers must agree that this threshold is good enough for users—performance below this value is unacceptably low and worth spending engineering time to fix. The product developers need to agree that if the error budget has been exhausted, they will take some steps to reduce risk to users until the service is back in the budget. The team responsible for the production environment tasked with defending this SLO have agreed that it is defensible without Herculean effort, excessive toil, and burnout—all of which are damaging to the team's long-term health and service.
 
@@ -383,7 +395,7 @@ For a proposed SLO to be useful and effective, you will need to get all stakehol
 
 ### Alerting on Observability data
 
-Prior to the widespread adoption of metrics collection, most software systems relied solely on logs to troubleshoot and triage problems and gain visibility into their systems. In addition to log search and dashboard, logs also served as the primary Alert source for many teams and tools. This method still exists today in many modern observability systems but generally should be avoided in favor of alerting on time series metrics. More specifically, we'll look at using your defined SLOs and errors budgets to perform actionable alerting.
+Prior to the widespread adoption of metrics collection, most software systems relied solely on logs to troubleshoot and triage problems and gain visibility into their systems. In addition to log search and dashboard, logs also served as the primary Alert source for many teams and tools. This method still exists today in many modern observability systems, but generally should be avoided in favor of alerting on time series metrics. More specifically, we'll look at using your defined SLOs and errors budgets to perform actionable alerting.
 
 There are many signals within your time-series data that you can alert on, and many of these will likely be application-specific. A recommended best practice is to use your team's SLOs to drive your alerts. As mentioned above, an SLO is a Service Level Objective, a target value or range of values for a service level that is measured by a service level indicator. For example, an SLO for a REST API maybe that "95% of requests must be served in less than 500 milliseconds". In order to have effective alerts for your team, you should also define error budgets. We'll look at ways to combine your SLO and error budgets with driving actionable alerting.
 
@@ -446,7 +458,7 @@ So, five percent of a 30-day error budget spent over one hour requires a burn ra
 
 ### Multi-signal correlation
 
-Hopefully, the above write up explains well how to think about observability correlation, what it means and what is achievable right now. Yet let's quickly enumerate the pitfalls of today's multi-signal observability linking:
+Hopefully, the above write up explains well how to think about observability correlation, what it means and what is achievable right now. Conversely, let's quickly enumerate the pitfalls of today's multi-signal observability linking:
 
 * Inconsistent metadata
 
@@ -454,17 +466,17 @@ As mentioned previously, even slight inconsistency across labels might be annoyi
 
 * Lack of request ID or different ID to the Tracing ID in the logging signal.
 
-As mentioned previously, this can be solved on the instrumentation side, which is sometimes hard to control. Middleware and service meshes can help too.
+As has been pointed out, this can be solved on the instrumentation side, which is sometimes hard to control. Middleware and service meshes can help too.
 
 * Tricky tracing sampling cases
 
-Collecting all traces and spans for all your requests can be extremely expensive. That's why the project defines different sampling techniques allowing only "sample" (so collect) those traces that might be useful later on. It's non-trivial to say which ones are important, so complex sampling emerged. The main problem is to make sure correlation points like exemplars or direct trace ID in the logging system points to the sampled trace. It would be a poor user experience if our front-end systems would expose exemplar of the dead-end link (no trace available in the storage).
+Collecting all traces and spans for all your requests can be extremely expensive. That's why the project defines different sampling techniques allowing to only "sample" (so collect) those traces that might be useful later on. It's non-trivial to say which ones are important, so complex sampling emerged. The main problem is to make sure correlation points like exemplars or direct trace ID in the logging system points to the sampled trace. It would be a poor user experience if our front-end systems would expose exemplar of the dead-end link (no trace available in the storage).
 
-While this experience can be improved on the UI side (e.g., checking upfront if trace exists before rendering exemplar), it's not trivial and presents further complexity to the system. Ideally, we can check if a trace was sampled before injecting exemplar to logging on the metric system. If an upfront sampling method was used, OpenTelemetry coding APIs allow getting sampling information via, e.g. `IsSampled` method. The problem appears if we talk about tail-based sampling or further processes that might analyze which trace is interesting or not. We are yet to see some better ideas to improve this small but annoying problem. If you have a 100% sampling or upfront sampling decision (ratio of request or user-chosen), this problem disappears.
+While this experience can be improved on the UI side (e.g. checking upfront if trace exists before rendering exemplar), it's not trivial and presents further complexity to the system. Ideally, we can check if a trace was sampled before injecting exemplar to logging on the metric system. If an upfront sampling method was used, OpenTelemetry coding APIs allow getting sampling information via, e.g. `IsSampled` method. The problem appears if we talk about tail-based sampling or further processes that might analyze which trace is interesting or not. We are yet to see some better ideas to solve this small yet irritating problem. If there is a 100% sampling or upfront sampling decision (ratio of request or user-chosen), this problem disappears.
 
 * Exemplars are new in the ecosystem.
 
-Prometheus user experience is especially great because having Prometheus/OpenMetrics exposition in your application is the standard. Software around the world uses this simple mechanism to add plentiful useful metrics. Because Prometheus exemplars are new, as are OpenTelemetry tracing libraries, it will take time for people to start "instrumenting their instrumentation" with exemplars.
+Prometheus user experience is especially great, because having Prometheus/OpenMetrics exposition in your application is the standard. Software around the world uses this simple mechanism to add plentiful, useful metrics. Because Prometheus exemplars are new, as are OpenTelemetry tracing libraries, it will take time for people to start "instrumenting their instrumentation" with exemplars.
 
 But! You can start from your own case by adding Prometheus exemplars support to your application. This correlation pattern is becoming a new standard (e.g. instrumented in Thanos), so help yourself and your users by adding them up and allowing easy linking between tracing and metrics.
 
@@ -474,7 +486,7 @@ Something that is yet to be added is the ability to add exemplars for recording 
 
 * Native Correlation support in UIs.
 
-Grafana is pioneering in multi-signal links, but many other UIs would use better correlation support given the ways shared in this article. Before the Grafana, the space was pretty fragmented (each signal usually had its own view, rarely thinking about other signals). Prometheus UI is no different. Extra support for linking to other signals or rendering exemplars are to be [added](https://github.com/prometheus/prometheus/issues/8797) there too.
+Grafana is a pioneer in multi-signal links, but many other UIs could use better correlation support given the ways shared in this article. Before Grafana, the space was pretty fragmented (each signal usually had its own view, rarely thinking about other signals). Prometheus UI is no different. Extra support for linking to other signals or rendering exemplars are to be [added](https://github.com/prometheus/prometheus/issues/8797) there too.
 
 ## Contributors
 
